@@ -20,16 +20,14 @@ export B2_APPLICATION_KEY=your_application_key
 
 Create an application key in the Backblaze web console under **Account → App Keys**.
 
-### 3. Claude Desktop config
-
-Add to `~/.config/claude/claude_desktop_config.json`:
+### 3. MCP config json
 
 ```json
 {
   "mcpServers": {
     "backblaze-b2": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-backblaze/dist/index.js"],
+      "args": ["-y", "github:bjafl/mcp-backblaze"],
       "env": {
         "B2_APPLICATION_KEY_ID": "your_key_id",
         "B2_APPLICATION_KEY": "your_application_key"

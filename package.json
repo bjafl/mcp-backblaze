@@ -4,12 +4,16 @@
   "description": "MCP server for Backblaze B2 Cloud Storage",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-backblaze": "./dist/index.js"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "test": "tsx test/connection.ts"
+    "test": "tsx test/connection.ts",
+    "prepare": "npm run clean && npm run build"
   },
   "engines": {
     "node": ">=18"
