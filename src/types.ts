@@ -2,26 +2,65 @@ export interface B2AuthResponse {
   accountId: string;
   authorizationToken: string;
   applicationKeyExpirationTimestamp: number | null;
-  apiInfo: {
-    storageApi: {
-      apiUrl: string;
-      downloadUrl: string;
-      absoluteMinimumPartSize: number;
-      recommendedPartSize: number;
-      s3ApiUrl: string;
-      allowed: {
-        buckets: string[];
-        capabilities: string[];
-        namePrefix: string | null;
-      };
-    };
+  apiInfo: B2ApiInfo;
+}
+
+export interface B2ApiInfo {
+  storageApi: B2StorageApiInfo;
+  groupsApi: unknown; //TODO
+}
+
+export interface B2StorageApiInfo {
+  apiUrl: string;
+  downloadUrl: string;
+  absoluteMinimumPartSize: number;
+  recommendedPartSize: number;
+  s3ApiUrl: string;
+  allowed: {
+    buckets: B2BucketRef[] | null;
+    capabilities: string[];
+    namePrefix: string | null;
   };
 }
 
-export interface B2Bucket {
-  accountId: string;
+export type B2StorageCapabilities = [
+  "deleteFiles",
+  "deleteKeys",
+  "readBucketEncryption",
+  "writeKeys",
+  "writeBuckets",
+  "writeBucketNotifications",
+  "writeBucketReplications",
+  "readBucketNotifications",
+  "readBucketReplications",
+  "deleteBuckets",
+  "readBuckets",
+  "bypassGovernance",
+  "readFileLegalHolds",
+  "readFiles",
+  "listAllBucketNames",
+  "readBucketRetentions",
+  "writeBucketRetentions",
+  "writeFileLegalHolds",
+  "shareFiles",
+  "writeFiles",
+  "listKeys",
+  "listBuckets",
+  "listFiles",
+  "writeFileRetentions",
+  "writeBucketEncryption",
+  "readFileRetentions",
+];
+
+export interface B2BucketRef {
+  id: string;
+  name: string;
+}
+
+export interface B2Bucket extends B2BucketRef {
   bucketId: string;
   bucketName: string;
+  accountId: string;
   bucketType: string;
   bucketInfo: Record<string, unknown>;
   lifecycleRules: unknown[];
@@ -50,9 +89,8 @@ export interface B2UploadUrlResponse {
 
 export interface AuthState {
   token: string;
-  apiUrl: string;
-  downloadUrl: string;
   accountId: string;
+  storage: B2StorageApiInfo;
   expiresAt: number;
 }
 

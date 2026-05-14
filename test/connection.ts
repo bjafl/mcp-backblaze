@@ -3,13 +3,14 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { authorize, listBuckets, listFiles } from "../src/b2client.js";
 import type { B2Bucket } from "../src/types.js";
 
-const verbose = process.argv.includes("--verbose") || process.argv.includes("-v");
+const verbose =
+  process.argv.includes("--verbose") || process.argv.includes("-v");
 
 const PASS = "✓";
 const FAIL = "✗";
 const INFO = "·";
-const REQ  = "→";
-const RES  = "←";
+const REQ = "→";
+const RES = "←";
 
 let failures = 0;
 
@@ -21,12 +22,18 @@ function fail(label: string, err: unknown): void {
   failures++;
   if (err instanceof AxiosError) {
     const status = err.response?.status ?? "no response";
-    const data = err.response?.data as { code?: string; message?: string } | undefined;
+    const data = err.response?.data as
+      | { code?: string; message?: string }
+      | undefined;
     console.log(`  ${FAIL} ${label}`);
-    console.log(`       HTTP ${status}  code=${data?.code ?? "—"}  message=${data?.message ?? err.message}`);
+    console.log(
+      `       HTTP ${status}  code=${data?.code ?? "—"}  message=${data?.message ?? err.message}`,
+    );
     if (verbose && err.response) {
       console.log(`       Headers: ${JSON.stringify(err.response.headers)}`);
-      console.log(`       Body:    ${JSON.stringify(err.response.data, null, 2)}`);
+      console.log(
+        `       Body:    ${JSON.stringify(err.response.data, null, 2)}`,
+      );
     }
   } else {
     const msg = err instanceof Error ? err.message : String(err);
@@ -55,7 +62,8 @@ if (verbose) {
     const method = config.method?.toUpperCase() ?? "?";
     const url = axios.getUri(config);
     console.log(`\n    ${REQ} ${method} ${url}`);
-    if (config.params) console.log(`       Params:  ${JSON.stringify(config.params)}`);
+    if (config.params)
+      console.log(`       Params:  ${JSON.stringify(config.params)}`);
     const auth = config.headers?.Authorization as string | undefined;
     if (auth) console.log(`       Auth:    ${maskAuth(auth)}`);
     if (config.data && typeof config.data === "string") {
@@ -63,7 +71,9 @@ if (verbose) {
     } else if (config.data && Buffer.isBuffer(config.data)) {
       console.log(`       Body:    <Buffer ${config.data.length} bytes>`);
     } else if (config.data) {
-      console.log(`       Body:    ${JSON.stringify(config.data).slice(0, 200)}`);
+      console.log(
+        `       Body:    ${JSON.stringify(config.data).slice(0, 200)}`,
+      );
     }
     return config;
   });
@@ -72,12 +82,15 @@ if (verbose) {
     (response) => {
       console.log(`    ${RES} ${response.status} ${response.statusText}`);
       const body = JSON.stringify(response.data, null, 2);
-      const truncated = body.length > 800 ? `${body.slice(0, 800)}\n       …(truncated)` : body;
+      const truncated =
+        body.length > 800 ? `${body.slice(0, 800)}\n       …(truncated)` : body;
       console.log(`       Body:    ${truncated.replace(/\n/g, "\n       ")}`);
       return response;
     },
     (error: AxiosError) => {
-      console.log(`    ${RES} ${error.response?.status ?? "ERR"} ${error.response?.statusText ?? error.code}`);
+      console.log(
+        `    ${RES} ${error.response?.status ?? "ERR"} ${error.response?.statusText ?? error.code}`,
+      );
       if (error.response?.data) {
         console.log(`       Body:    ${JSON.stringify(error.response.data)}`);
       }
@@ -96,7 +109,10 @@ const key = process.env.B2_APPLICATION_KEY;
 if (keyId) {
   ok("B2_APPLICATION_KEY_ID", `${keyId.slice(0, 6)}…`);
 } else {
-  fail("B2_APPLICATION_KEY_ID", new Error("not set — copy .env.example to .env and fill in credentials"));
+  fail(
+    "B2_APPLICATION_KEY_ID",
+    new Error("not set — copy .env.example to .env and fill in credentials"),
+  );
 }
 
 if (key) {
@@ -118,8 +134,10 @@ let auth;
 try {
   auth = await authorize();
   ok("b2_authorize_account", `accountId=${auth.accountId}`);
-  info(`API URL:      ${auth.apiUrl}`);
-  info(`Download URL: ${auth.downloadUrl}`);
+  info("Storage URLs:");
+  info(`\tAPI URL:      ${auth.storage.apiUrl}`);
+  info(`\tDownload URL: ${auth.storage.downloadUrl}`);
+  info(`\tS3 API URL: ${auth.storage.s3ApiUrl}`);
 } catch (err) {
   fail("b2_authorize_account", err);
   console.log("\nAborting — cannot authenticate.\n");
@@ -151,7 +169,10 @@ if (buckets.length > 0) {
       const result = await listFiles(bucket.bucketId, undefined, 10);
       const count = result.files.length;
       const more = result.nextFileName !== null ? " (more available)" : "";
-      ok(`b2_list_file_names — ${bucket.bucketName}`, `${count} file(s)${more}`);
+      ok(
+        `b2_list_file_names — ${bucket.bucketName}`,
+        `${count} file(s)${more}`,
+      );
       for (const f of result.files) {
         const kb = (f.contentLength / 1024).toFixed(1);
         info(`  ${f.fileName}  (${kb} KB)`);
