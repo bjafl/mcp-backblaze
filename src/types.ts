@@ -1,12 +1,14 @@
 export interface B2AuthResponse {
   accountId: string;
   authorizationToken: string;
+  applicationKeyExpirationTimestamp: number | null;
   apiInfo: {
     storageApi: {
       apiUrl: string;
       downloadUrl: string;
       absoluteMinimumPartSize: number;
       recommendedPartSize: number;
+      s3ApiUrl: string;
       allowed: {
         buckets: string[];
         capabilities: string[];
