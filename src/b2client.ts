@@ -82,15 +82,10 @@ export async function listFiles(
   return response.data;
 }
 
-export async function uploadFile(
-  bucketId: string,
-  fileName: string,
-  filePath: string,
-  contentType: string = "b2/x-auto",
-): Promise<B2FileInfo> {
+export async function getUploadUrl(bucketId: string): Promise<B2UploadUrlResponse> {
   const auth = await authorize();
-  const { apiUrl, allowed } = auth.storage;
-  const urlResponse = await axios.get<B2UploadUrlResponse>(
+  const { apiUrl } = auth.storage;
+  const response = await axios.get<B2UploadUrlResponse>(
     `${apiUrl}/b2api/v4/b2_get_upload_url`,
     {
       headers: { Authorization: auth.token },
@@ -98,18 +93,24 @@ export async function uploadFile(
       timeout: 30000,
     },
   );
-  const { uploadUrl, authorizationToken: uploadToken } = urlResponse.data;
+  return response.data;
+}
 
-  const fileBuffer = readFileSync(filePath);
-  const sha1 = createHash("sha1").update(fileBuffer).digest("hex");
+async function uploadBuffer(
+  uploadUrl: string,
+  uploadToken: string,
+  fileName: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<B2FileInfo> {
+  const sha1 = createHash("sha1").update(buffer).digest("hex");
   const encodedName = encodeURIComponent(fileName).replace(/%2F/g, "/");
-
-  const response = await axios.post<B2FileInfo>(uploadUrl, fileBuffer, {
+  const response = await axios.post<B2FileInfo>(uploadUrl, buffer, {
     headers: {
       Authorization: uploadToken,
       "X-Bz-File-Name": encodedName,
       "Content-Type": contentType,
-      "Content-Length": fileBuffer.length,
+      "Content-Length": buffer.length,
       "X-Bz-Content-Sha1": sha1,
     },
     maxContentLength: Infinity,
@@ -117,6 +118,29 @@ export async function uploadFile(
     timeout: 120000,
   });
   return response.data;
+}
+
+export async function uploadFile(
+  bucketId: string,
+  fileName: string,
+  filePath: string,
+  contentType: string = "b2/x-auto",
+): Promise<B2FileInfo> {
+  const { uploadUrl, authorizationToken: uploadToken } = await getUploadUrl(bucketId);
+  const buffer = readFileSync(filePath);
+  return uploadBuffer(uploadUrl, uploadToken, fileName, buffer, contentType);
+}
+
+export async function uploadContent(
+  bucketId: string,
+  fileName: string,
+  content: string,
+  encoding: "utf-8" | "base64" = "utf-8",
+  contentType: string = "b2/x-auto",
+): Promise<B2FileInfo> {
+  const { uploadUrl, authorizationToken: uploadToken } = await getUploadUrl(bucketId);
+  const buffer = Buffer.from(content, encoding);
+  return uploadBuffer(uploadUrl, uploadToken, fileName, buffer, contentType);
 }
 
 export async function downloadFile(

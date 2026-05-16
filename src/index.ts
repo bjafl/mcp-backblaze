@@ -309,6 +309,137 @@ Notes:
   },
 );
 
+// ── b2_upload_content ────────────────────────────────────────────────────────
+
+server.registerTool(
+  "b2_upload_content",
+  {
+    title: "Upload Content to B2",
+    description: `Uploads inline content (text or base64) to a Backblaze B2 bucket without needing a local file on the server's filesystem.
+
+Use this tool when you have file content in memory (e.g., a generated markdown note).
+Use b2_upload_file instead when uploading an existing file already on the MCP server's filesystem.
+
+Args:
+  - bucket_id (string): Destination bucket ID (from b2_list_buckets)
+  - remote_name (string): File name in B2. Use '/' for virtual folders (e.g., 'Oppskrifter/recipe.md')
+  - content (string): File contents. UTF-8 text by default; base64-encoded bytes when encoding='base64'
+  - encoding ('utf-8' | 'base64'): Content encoding (default: 'utf-8')
+  - content_type (string, optional): MIME type (default: 'b2/x-auto' for auto-detection)
+
+Returns:
+  Upload result with fileId, fileName, contentLength, contentSha1, and uploadTimestamp.`,
+    inputSchema: z.object({
+      bucket_id: z.string().describe("Destination bucket ID (from b2_list_buckets)"),
+      remote_name: z
+        .string()
+        .describe(
+          "File name in B2. Use '/' for virtual folders (e.g., 'Oppskrifter/recipe.md')",
+        ),
+      content: z
+        .string()
+        .describe(
+          "File contents as a string. UTF-8 text by default; base64-encoded for binary files",
+        ),
+      encoding: z
+        .enum(["utf-8", "base64"])
+        .default("utf-8")
+        .describe(
+          "Content encoding: 'utf-8' for text files (default), 'base64' for binary",
+        ),
+      content_type: z
+        .string()
+        .optional()
+        .describe("MIME type (default: 'b2/x-auto' for auto-detection)"),
+    }).strict(),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  async ({ bucket_id, remote_name, content, encoding, content_type }) => {
+    try {
+      const result = await b2.uploadContent(
+        bucket_id,
+        remote_name,
+        content,
+        encoding,
+        content_type ?? "b2/x-auto",
+      );
+
+      const text = [
+        "# Upload Successful",
+        "",
+        `- **File**: ${result.fileName}`,
+        `- **ID**: \`${result.fileId}\``,
+        `- **Size**: ${formatBytes(result.contentLength)}`,
+        `- **SHA1**: ${result.contentSha1}`,
+        `- **Uploaded**: ${new Date(result.uploadTimestamp).toISOString()}`,
+      ].join("\n");
+
+      return {
+        content: [{ type: "text", text }],
+        structuredContent: toRecord(result),
+      };
+    } catch (error) {
+      return { content: [{ type: "text", text: b2.handleApiError(error) }] };
+    }
+  },
+);
+
+// ── b2_get_upload_url ────────────────────────────────────────────────────────
+
+server.registerTool(
+  "b2_get_upload_url",
+  {
+    title: "Get B2 Upload URL",
+    description: `Gets a one-time upload URL and authorization token for direct client-side uploads to a Backblaze B2 bucket.
+
+Use this when the caller will perform the upload itself (e.g., uploading large files directly from a client without routing content through this server). For small files or generated content, use b2_upload_content instead.
+
+Args:
+  - bucket_id (string): Destination bucket ID (from b2_list_buckets)
+
+Returns:
+  {
+    "uploadUrl": string,       // POST target for the upload
+    "authorizationToken": string,  // Value for the Authorization header
+    "bucketId": string
+  }
+
+Notes:
+  - The upload URL is single-use and expires after ~24 hours or on first use.
+  - The caller must set these headers on the upload POST:
+      Authorization: <authorizationToken>
+      X-Bz-File-Name: <percent-encoded filename>
+      Content-Type: <mime type or 'b2/x-auto'>
+      Content-Length: <byte length>
+      X-Bz-Content-Sha1: <hex sha1 of file bytes>`,
+    inputSchema: z.object({
+      bucket_id: z.string().describe("Destination bucket ID (from b2_list_buckets)"),
+    }).strict(),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  async ({ bucket_id }) => {
+    try {
+      const result = await b2.getUploadUrl(bucket_id);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: toRecord(result),
+      };
+    } catch (error) {
+      return { content: [{ type: "text", text: b2.handleApiError(error) }] };
+    }
+  },
+);
+
 // ── b2_download_file ─────────────────────────────────────────────────────────
 
 server.registerTool(
